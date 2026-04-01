@@ -1,0 +1,130 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: dograh-postgres
+    plan: standard
+    ipAllowList: []
+    envVars:
+      - key: POSTGRES_USER
+        value: postgres
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+      - key: POSTGRES_DB
+        value: dograh_db
+    postgresMajorVersion: "17"
+    preDeployCommand: ""
+
+  # Redis Cache
+  - type: redis
+    name: dograh-redis
+    plan: standard
+    ipAllowList: []
+    region: oregon
+
+  # API Service
+  - type: web
+    name: dograh-api
+    runtime: python313
+    plan: standard
+    region: oregon
+    buildCommand: |
+      cd api && pip install -r requirements.txt
+    startCommand: cd api && uvicorn app:app --host 0.0.0.0 --port $PORT --workers ${FASTAPI_WORKERS:-2}
+    autoDeployOnPush: true
+    envVars:
+      # References to other services
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: dograh-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: dograh-redis
+          property: connectionString
+      # Application configuration
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: BACKEND_API_ENDPOINT
+        value: https://${RENDER_EXTERNAL_HOSTNAME}
+      - key: OSS_JWT_SECRET
+        generateValue: true
+      # Storage configuration - using S3 (configure with your own bucket)
+      - key: ENABLE_AWS_S3
+        value: "true"
+      - key: AWS_S3_BUCKET_NAME
+        value: dograh-audio-storage
+      # AWS credentials for S3 (generate in AWS IAM)
+      # - key: AWS_ACCESS_KEY_ID
+      #   value: your_access_key
+      # - key: AWS_SECRET_ACCESS_KEY
+      #   value: your_secret_key
+      # - key: AWS_REGION
+      #   value: us-east-1
+      # FastAPI workers
+      - key: FASTAPI_WORKERS
+        value: "2"
+      # Disable MinIO (using S3 instead)
+      - key: MINIO_ENDPOINT
+        value: ""
+      - key: MINIO_ACCESS_KEY
+        value: ""
+      - key: MINIO_SECRET_KEY
+        value: ""
+      # Telemetry
+      - key: ENABLE_TELEMETRY
+        value: "true"
+      - key: ENABLE_TRACING
+        value: "false"
+      # TURN server (optional)
+      - key: TURN_HOST
+        value: ""
+      - key: TURN_SECRET
+        value: ""
+    headers:
+      - http:
+          paths:
+            - path: /api/v1/health
+              methods:
+                - GET
+          domain: ""
+    healthCheckPath: /api/v1/health
+    healthCheckInterval: 30
+    healthCheckTimeout: 10
+    healthCheckStartPeriod: 60
+    maxShutdownDelay: 30
+
+  # UI Service
+  - type: web
+    name: dograh-ui
+    runtime: node
+    plan: standard
+    region: oregon
+    buildCommand: cd ui && npm install && npm run build
+    startCommand: cd ui && npm start
+    autoDeployOnPush: true
+    envVars:
+      - key: BACKEND_URL
+        value: https://dograh-api.onrender.com
+      - key: NODE_ENV
+        value: oss
+      - key: ENABLE_TELEMETRY
+        value: "true"
+      - key: POSTHOG_KEY
+        value: phc_ItizB1dP6yv7ZYobbcqrpxTdbomDA8hJFSEmAMdYvIr
+      - key: POSTHOG_HOST
+        value: https://us.posthog.com
+    headers:
+      - http:
+          paths:
+            - path: /
+              methods:
+                - GET
+          domain: ""
+    healthCheckPath: /
+    healthCheckInterval: 30
+    healthCheckTimeout: 10
+    healthCheckStartPeriod: 30
