@@ -26,7 +26,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dograh",
+  title: "SayLo",
   description: "Open Source Voice Assistant Workflow Builder",
 };
 

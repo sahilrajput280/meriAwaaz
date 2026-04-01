@@ -227,7 +227,7 @@ export function AppSidebar() {
               href="/"
               className="flex items-center gap-2 px-2 text-xl font-bold"
             >
-              Voice Agent
+              SayLo
               {versionInfo && (
                 <span className="text-xs font-normal text-muted-foreground">
                   v1.0
