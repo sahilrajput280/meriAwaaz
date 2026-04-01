@@ -20,6 +20,7 @@ email-validator==2.3.0
 loguru==0.7.3
 httpx==0.28.1
 PyJWT==2.12.1
+protobuf==5.29.6
 python-dotenv==1.2.1
 numpy==2.4.3
 scipy==1.17.1
